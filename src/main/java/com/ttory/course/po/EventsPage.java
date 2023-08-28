@@ -2,6 +2,7 @@ package com.ttory.course.po;
 
 import org.apache.logging.log4j.LogManager;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -12,6 +13,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -26,7 +28,7 @@ public class EventsPage extends AbstractOtusPage {
             "05", "06", "07", "08",
             "09", "10", "11", "12"
     };
-    public static final String DATE_FORMAT = "dd MM";
+    public static final String DATE_FORMAT = "dd MM yyyy";
     @FindBy(xpath = "//span[contains(@class, 'dod_new-event__calendar-icon')]/../span[@class = 'dod_new-event__date-text']")
     private List<WebElement> eventsList;
     @FindBy(xpath = "//div[contains(@class, 'dod_new-type__text')]")
@@ -35,6 +37,9 @@ public class EventsPage extends AbstractOtusPage {
     private WebElement eventTypeSelector;
     @FindBy(xpath = "//div[contains(@class, 'dod_new-events-dropdown')]/div[@class = 'dod_new-events-dropdown__list js-dod_new_events-dropdown']/a[@class = 'dod_new-events-dropdown__list-item' and contains(text(), 'Открытый вебинар')]")
     private WebElement eventOpenWebinarSelector;
+
+    @FindBy(xpath = "//div[contains(@class, 'dod_new-loader-wrapper')]")
+    private WebElement loader;
 
     public EventsPage(WebDriver driver) {
         super(driver);
@@ -50,24 +55,26 @@ public class EventsPage extends AbstractOtusPage {
     }
 
     public void scrollDown() {
-        try {
-            long lastHeight = (long) ((JavascriptExecutor) driver).executeScript("return document.body.scrollHeight");
+        long lastHeight = (long) ((JavascriptExecutor) driver).executeScript("return document.body.scrollHeight");
 
-            logger.info("Scrolling page, H: {}", lastHeight);
-            while (true) {
-                ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, document.body.scrollHeight);");
-                Thread.sleep(1000);
-
-                long newHeight = (long) ((JavascriptExecutor) driver).executeScript("return document.body.scrollHeight");
-
-                logger.info("Scrolling page, new H: {}", newHeight);
-                if (newHeight == lastHeight) {
-                    break;
-                }
-                lastHeight = newHeight;
+        logger.info("Scrolling page, H: {}", lastHeight);
+        while (true) {
+            ((JavascriptExecutor) driver).executeScript("window.scrollTo(0, document.body.scrollHeight);");
+            try {
+                waitOne.until(ExpectedConditions.visibilityOf(loader));
+            } catch (TimeoutException ignored) {
             }
-        } catch (InterruptedException e) {
-            logger.info(e);
+            try {
+                waitTen.until(ExpectedConditions.invisibilityOf(loader));
+            } catch (TimeoutException ignored) {
+            }
+            long newHeight = (long) ((JavascriptExecutor) driver).executeScript("return document.body.scrollHeight");
+
+            logger.info("Scrolling page, new H: {}", newHeight);
+            if (newHeight == lastHeight) {
+                break;
+            }
+            lastHeight = newHeight;
         }
     }
 
@@ -86,13 +93,13 @@ public class EventsPage extends AbstractOtusPage {
             try {
                 parsingDate = ft.parse(replaceAll(el.getText(),
                         MONTH_RUS,
-                        MONTH_INDEX));
+                        MONTH_INDEX) + " " + Calendar.getInstance().get(Calendar.YEAR));
                 logger.info(parsingDate);
             } catch (ParseException e) {
                 logger.info("Failed to get data for " + el.getText());
                 return false;
             }
-            if (date.compareTo(parsingDate) < 0) {
+            if (parsingDate.compareTo(date) < 0) {
                 return false;
             }
         }

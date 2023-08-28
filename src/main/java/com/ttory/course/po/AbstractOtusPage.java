@@ -3,6 +3,7 @@ package com.ttory.course.po;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -12,6 +13,7 @@ public abstract class AbstractOtusPage {
     final WebDriver driver;
     final WebDriverWait waitTen;
     final WebDriverWait waitOne;
+    final WebDriverWait waitThirty;
     Logger logger;
 
     @FindBy(xpath = "//span[contains(text(), 'Посещая наш сайт, вы принимаете')]/../div/button")
@@ -21,6 +23,7 @@ public abstract class AbstractOtusPage {
 
     public AbstractOtusPage(WebDriver driver) {
         this.driver = driver;
+        waitThirty = new WebDriverWait(driver, Duration.ofSeconds(30));
         waitTen = new WebDriverWait(driver, Duration.ofSeconds(10));
         waitOne = new WebDriverWait(driver, Duration.ofSeconds(1));
     }
@@ -45,7 +48,7 @@ public abstract class AbstractOtusPage {
 
     public boolean pressChatButton() {
         try {
-            waitTen.until(ExpectedConditions.elementToBeClickable(chatButton));
+            waitOne.until(ExpectedConditions.elementToBeClickable(chatButton));
 
             try {
                 if (chatButton.isDisplayed()) {
@@ -58,5 +61,14 @@ public abstract class AbstractOtusPage {
         } catch (TimeoutException ignored) {
         }
         return false;
+    }
+
+    public void addWait() {
+        waitThirty.until( new ExpectedCondition<Boolean>() {
+            @Override
+            public Boolean apply (WebDriver driver){
+                return ((JavascriptExecutor) driver).executeScript("return document.readyState").equals("complete");
+            }
+        });
     }
 }

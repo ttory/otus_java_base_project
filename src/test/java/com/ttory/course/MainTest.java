@@ -1,5 +1,9 @@
 package com.ttory.course;
 
+import com.ttory.course.po.AbstractOtusPage;
+import com.ttory.course.po.CoursePage;
+import com.ttory.course.po.CoursesPage;
+import com.ttory.course.po.EventsPage;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import io.github.bonigarcia.wdm.config.DriverManagerType;
 import org.apache.logging.log4j.LogManager;
@@ -11,10 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxOptions;
-import com.ttory.course.po.AbstractOtusPage;
-import com.ttory.course.po.CoursePage;
-import com.ttory.course.po.CoursesPage;
-import com.ttory.course.po.EventsPage;
 
 import java.time.Duration;
 
@@ -82,14 +82,14 @@ public class MainTest {
         if (!chatPressed) {
             chatPressed = po.pressChatButton();
         }
-        addWait();
+        po.addWait();
     }
 
     private CoursesPage loadCoursesPage() {
         CoursesPage coursesPage = new CoursesPage(driver);
-        addWait();
+        coursesPage.addWait();
         removeCookieAndChat(coursesPage);
-        addWait();
+        coursesPage.addWait();
         coursesPage.clickTestDirCb();
 
         while (coursesPage.pressShowButton()) {
@@ -98,13 +98,6 @@ public class MainTest {
         return coursesPage;
     }
 
-    private void addWait() {
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     @Test
     void testCourses() {
@@ -118,7 +111,7 @@ public class MainTest {
             logger.info(String.format("Cheking course %d: %s", i + 1, title));
             coursesPage.clickOnCourse(i);
             CoursePage coursePage = new CoursePage(driver);
-            addWait();
+            coursePage.addWait();
             assertEquals(title, coursePage.getTitle(), "Course title");
             assertTrue(coursePage.hasDuration(), "Course duration");
             assertTrue(coursePage.hasFormat(), "Course format");
@@ -133,9 +126,9 @@ public class MainTest {
         driver.get(OTUS_EVENTS_URL);
 
         EventsPage eventsPage = new EventsPage(driver);
-        addWait();
+        eventsPage.addWait();
         removeCookieAndChat(eventsPage);
-        addWait();
+        eventsPage.addWait();
         eventsPage.scrollDown();
         logger.info("Event count is {}", eventsPage.eventsCount());
         assertTrue(eventsPage.checkDates(), "Outdated course!");
@@ -146,9 +139,9 @@ public class MainTest {
         driver.get(OTUS_EVENTS_URL);
 
         EventsPage eventsPage = new EventsPage(driver);
-        addWait();
+        eventsPage.addWait();
         removeCookieAndChat(eventsPage);
-        addWait();
+        eventsPage.addWait();
         eventsPage.filterOpenWebinars();
         eventsPage.scrollDown();
         logger.info("Event count is {}", eventsPage.eventsCount());
