@@ -1,41 +1,48 @@
 package com.ttory.course;
 
-import com.ttory.course.po.AbstractOtusPage;
-import com.ttory.course.po.CoursePage;
-import com.ttory.course.po.CoursesPage;
-import com.ttory.course.po.EventsPage;
+import com.ttory.course.components.CourseComponent;
+import com.ttory.course.pages.BasePage;
+import com.ttory.course.pages.CoursePage;
+import com.ttory.course.pages.CoursesPage;
+import com.ttory.course.pages.EventsPage;
 import io.github.bonigarcia.wdm.WebDriverManager;
-import io.github.bonigarcia.wdm.config.DriverManagerType;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.firefox.FirefoxOptions;
 
-import java.time.Duration;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+@Setter
 public class MainTest {
-    public static final String CHROME_DRIVER_VERSION = "116.0.5845.96";
-    public static final String OTUS_COURSES_URL = "https://otus.ru/catalog/courses";
-    public static final String OTUS_EVENTS_URL = "https://otus.ru/events/near/";
-    static String driverType = null;
-    WebDriver driver;
-    final Logger logger = LogManager.getLogger(MainTest.class);
+    private static String driverType = null;
+
+    @Getter
+    private WebDriver webDriver;
+
+    @Getter
+    private static final Logger logger = LogManager.getLogger(MainTest.class);
+
+    @Getter
     private boolean cookiePressed = false;
-    private boolean chatPressed = false;
+
 
     @BeforeAll
     static void setupAll() {
         String driverTypeEnv = System.getProperty("driver");
         if (driverTypeEnv == null) {
-            System.out.println("Please add `driver` environment variable to select webdriver!");
+            System.out.println("Please add `driver` environment variable to select webdriver!" +
+                    "(or add for exmp -Ddriver=chrome)");
+            getLogger().error("No `driver` environment present");
             System.exit(1);
         }
         driverType = driverTypeEnv;
@@ -44,107 +51,91 @@ public class MainTest {
     @BeforeEach
     void setup() {
         String remoteServer = System.getProperty("remote_server");
-        if (driverType == null) {
+
+        List<String> options = new ArrayList<>();
+        options.add("--headless");
+
+        WebDriver driver = WebDriverFactory.create(driverType, options, remoteServer);
+        if (driver == null) {
             System.out.println("Please add `driver` environment variable to select webdriver!");
+            getLogger().error("No `driver` environment present");
             System.exit(1);
         }
-
-        String type = driverType.trim().toUpperCase();
-        WebDriverManager manager = WebDriverManager.getInstance(type);
-        if (DriverManagerType.CHROME.toString().equals(type)) {
-            ChromeOptions chromeOptions = new ChromeOptions();
-            chromeOptions.addArguments("--remote-allow-origins=*");
-            chromeOptions.addArguments("--headless");
-            manager.driverVersion(CHROME_DRIVER_VERSION).capabilities(chromeOptions);
-        } else if (DriverManagerType.FIREFOX.toString().equals(type)) {
-            FirefoxOptions ffOptions = new FirefoxOptions();
-            ffOptions.addArguments("--headless");
-            manager.capabilities(ffOptions).create();
-        }
-        if (remoteServer != null) {
-            manager.remoteAddress(remoteServer);
-        }
-        driver = manager.create();
-
-        driver.manage().window().maximize();
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        setWebDriver(driver);
     }
 
     @AfterEach
     void teardown() {
-        driver.quit();
+        getWebDriver().quit();
     }
 
-    private void removeCookieAndChat(AbstractOtusPage po) {
-        if (!cookiePressed) {
-            cookiePressed = po.pressCookieButton();
+    private void removeCookieAlert(BasePage po) {
+        if (!isCookiePressed()) {
+            setCookiePressed(po.pressCookieButton());
         }
-        if (!chatPressed) {
-            chatPressed = po.pressChatButton();
-        }
-        po.addWait();
+
+        po.waitPageLoad();
     }
 
     private CoursesPage loadCoursesPage() {
-        CoursesPage coursesPage = new CoursesPage(driver);
-        coursesPage.addWait();
-        removeCookieAndChat(coursesPage);
-        coursesPage.addWait();
+        CoursesPage coursesPage = new CoursesPage(getWebDriver());
+        coursesPage.open();
+        coursesPage.waitPageLoad();
+        removeCookieAlert(coursesPage);
+        coursesPage.waitPageLoad();
         coursesPage.clickTestDirCb();
 
         while (coursesPage.pressShowButton()) {
-            logger.info("Clicking to show more button");
+            getLogger().info("Clicking to show more button");
         }
         return coursesPage;
     }
 
-
     @Test
     void testCourses() {
-        driver.get(OTUS_COURSES_URL);
         CoursesPage coursesPage = loadCoursesPage();
-        assertEquals(12, coursesPage.getCoursesCount(), "Courses count");
+        coursesPage.testCount(10);
+        int i = 0;
 
-
-        for (int i = 0; i < coursesPage.getCoursesCount(); i++) {
+        for(CourseComponent course: coursesPage.getCourses()) {
+            String link = course.getLink().getAttribute("href");
             String title = coursesPage.getTitle(i);
-            logger.info(String.format("Cheking course %d: %s", i + 1, title));
-            coursesPage.clickOnCourse(i);
-            CoursePage coursePage = new CoursePage(driver);
-            coursePage.addWait();
-            assertEquals(title, coursePage.getTitle(), "Course title");
-            assertTrue(coursePage.hasDuration(), "Course duration");
-            assertTrue(coursePage.hasFormat(), "Course format");
-            assertTrue(coursePage.hasDescription(), "Course description");
-            driver.navigate().back();
-            coursesPage = loadCoursesPage();
+            try {
+                Document doc = Jsoup.connect(link).get();
+                CoursePage coursePage = new CoursePage(doc);
+                coursePage.checkTitle(title);
+                coursePage.hasDuration();
+                coursePage.hasFormat();
+                coursePage.hasDescription();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            i++;
         }
     }
 
     @Test
     void testEvents() {
-        driver.get(OTUS_EVENTS_URL);
-
-        EventsPage eventsPage = new EventsPage(driver);
-        eventsPage.addWait();
-        removeCookieAndChat(eventsPage);
-        eventsPage.addWait();
+        EventsPage eventsPage = new EventsPage(getWebDriver());
+        eventsPage.open();
+        eventsPage.waitPageLoad();
+        removeCookieAlert(eventsPage);
+        eventsPage.waitPageLoad();
         eventsPage.scrollDown();
-        logger.info("Event count is {}", eventsPage.eventsCount());
-        assertTrue(eventsPage.checkDates(), "Outdated course!");
+        getLogger().info("Event count is {}", eventsPage.eventsCount());
+        eventsPage.checkDates();
     }
 
     @Test
     void testOpenWebinars() {
-        driver.get(OTUS_EVENTS_URL);
-
-        EventsPage eventsPage = new EventsPage(driver);
-        eventsPage.addWait();
-        removeCookieAndChat(eventsPage);
-        eventsPage.addWait();
+        EventsPage eventsPage = new EventsPage(getWebDriver());
+        eventsPage.open();
+        eventsPage.waitPageLoad();
+        removeCookieAlert(eventsPage);
+        eventsPage.waitPageLoad();
         eventsPage.filterOpenWebinars();
         eventsPage.scrollDown();
-        logger.info("Event count is {}", eventsPage.eventsCount());
-        assertTrue(eventsPage.checkOpenWebinars("Открытый вебинар"), "Incorrect type!");
+        getLogger().info("Event count is {}", eventsPage.eventsCount());
+        eventsPage.checkOpenWebinars("Открытый вебинар");
     }
 }

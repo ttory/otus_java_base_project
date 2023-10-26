@@ -1,5 +1,6 @@
-package com.ttory.course.po;
+package com.ttory.course.pages;
 
+import com.ttory.course.components.CourseComponent;
 import org.apache.logging.log4j.LogManager;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.FindBy;
@@ -7,8 +8,12 @@ import org.openqa.selenium.support.PageFactory;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class CoursesPage extends AbstractOtusPage {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class CoursesPage extends BasePage {
+    private static final String OTUS_COURSES_URL = "https://otus.ru/catalog/courses";
     @FindBy(xpath = "//label[contains(text(), 'Тестирование')]")
     private WebElement testDirCheckbox;
     @FindBy(xpath = "//div[contains(text(), 'Каталог')]/../../../div/div/a")
@@ -18,12 +23,18 @@ public class CoursesPage extends AbstractOtusPage {
 
     public CoursesPage(WebDriver driver) {
         super(driver);
-        logger = LogManager.getLogger(CoursesPage.class);
+        setLogger(LogManager.getLogger(CoursesPage.class));
         PageFactory.initElements(driver, this);
+        setPageUrl(OTUS_COURSES_URL);
+    }
+
+
+    public List<CourseComponent> getCourses() {
+        return coursesList.stream().map(CourseComponent::new).collect(Collectors.toList());
     }
 
     public void clickTestDirCb() {
-        waitTen.until(ExpectedConditions.visibilityOf(testDirCheckbox));
+        getWaitObject().until(ExpectedConditions.visibilityOf(testDirCheckbox));
         if (!testDirCheckbox.findElement(By.xpath("./../div/input")).isSelected()) {
             testDirCheckbox.click();
         }
@@ -31,8 +42,11 @@ public class CoursesPage extends AbstractOtusPage {
 
     public boolean pressShowButton() {
         try {
-            waitOne.until(ExpectedConditions.visibilityOf(showMoreCoursesButton));
-
+            try {
+                getWaitObject().until(ExpectedConditions.visibilityOf(showMoreCoursesButton));
+            } catch (TimeoutException e) {
+                return false;
+            }
             try {
                 if (showMoreCoursesButton.isDisplayed()) {
                     showMoreCoursesButton.click();
@@ -65,5 +79,9 @@ public class CoursesPage extends AbstractOtusPage {
             }
         }
         return null;
+    }
+
+    public void testCount(int count) {
+        assertEquals(count, getCoursesCount(), "Courses count");
     }
 }
