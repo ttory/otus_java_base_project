@@ -24,11 +24,15 @@ public abstract class BasePage {
     @Getter
     @Setter
     private String pageUrl;
+    @Getter
+    @Setter
+    private String baseUrl;
 
     @FindBy(xpath = "//span[contains(text(), 'Посещая наш сайт, вы принимаете')]/../div/button")
     private WebElement cookieButton;
 
     public BasePage(WebDriver driver) {
+        setBaseUrl(System.getProperty("base.url"));
         setWebDriver(driver);
         setWaitObject(new WebDriverWait(driver, Duration.ofSeconds(10)));
     }

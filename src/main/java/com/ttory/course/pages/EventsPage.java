@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class EventsPage extends BasePage {
-    private static final String OTUS_EVENTS_URL = "https://otus.ru/events/near/";
+    private static final String OTUS_EVENTS_URL = "/events/near/";
     @FindBy(xpath = "//a[@class = 'dod_new-event']")
     private List<WebElement> eventsList;
     @FindBy(xpath = "//div[contains(@class, 'dod_new-events-dropdown')]/div[@class = 'dod_new-events-dropdown__input']")
@@ -31,7 +31,7 @@ public class EventsPage extends BasePage {
         super(driver);
         setLogger(LogManager.getLogger(EventsPage.class));
         PageFactory.initElements(driver, this);
-        setPageUrl(OTUS_EVENTS_URL);
+        setPageUrl(getBaseUrl() + OTUS_EVENTS_URL);
     }
 
     public void scrollDown() {

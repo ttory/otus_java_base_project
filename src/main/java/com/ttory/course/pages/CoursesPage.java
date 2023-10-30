@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CoursesPage extends BasePage {
-    private static final String OTUS_COURSES_URL = "https://otus.ru/catalog/courses";
+    private static final String OTUS_COURSES_URL = "/catalog/courses";
     @FindBy(xpath = "//label[contains(text(), 'Тестирование')]")
     private WebElement testDirCheckbox;
     @FindBy(xpath = "//div[contains(text(), 'Каталог')]/../../../div/div/a")
@@ -25,7 +25,7 @@ public class CoursesPage extends BasePage {
         super(driver);
         setLogger(LogManager.getLogger(CoursesPage.class));
         PageFactory.initElements(driver, this);
-        setPageUrl(OTUS_COURSES_URL);
+        setPageUrl(getBaseUrl() + OTUS_COURSES_URL);
     }
 
 
