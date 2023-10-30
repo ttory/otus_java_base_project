@@ -32,11 +32,17 @@ public abstract class BasePage {
     private WebElement cookieButton;
 
     public BasePage(WebDriver driver) {
-        setBaseUrl(System.getProperty("base.url"));
+        String url = System.getProperty("base.url");
+        if (url == null) {
+            System.out.println("Please add `base.url` environment variable to select webdriver! " +
+                    "(or add for exmp -Dbase.url=http://otus.ru)");
+            getLogger().error("No `base.url` environment present");
+            System.exit(1);
+        }
+        setBaseUrl(url);
         setWebDriver(driver);
         setWaitObject(new WebDriverWait(driver, Duration.ofSeconds(10)));
     }
-
     public boolean pressCookieButton() {
         try {
             getWaitObject().until(ExpectedConditions.elementToBeClickable(cookieButton));
